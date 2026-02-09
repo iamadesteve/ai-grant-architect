@@ -1,5 +1,5 @@
 import streamlit as st
-from modules import image_generator, document_generator
+from modules import image_generator, document_generator, state_manager
 import time
 from google.api_core import exceptions
 
@@ -78,10 +78,15 @@ if 'generated_plan_text' not in st.session_state:
     st.session_state['generated_plan_text'] = ""
 if 'generated_images' not in st.session_state:
     st.session_state['generated_images'] = {}
-if 'messages' not in st.session_state:
-    st.session_state['messages'] = [
-        {"role": "assistant", "content": "Hello. I am your Professional Consultant. I acknowledge the strict 60-page minimum requirement. Let's begin Meeting 1. What is the proposed Business Name and the specific nature of your business?"}
-    ]
+    # Load Saved Session
+    if 'messages' not in st.session_state:
+        # Try to load from disk first
+        loaded = state_manager.load_session()
+        if not loaded:
+            # Initialize default if no save file
+            st.session_state['messages'] = [
+                {"role": "assistant", "content": "Hello. I am your Professional Consultant. I acknowledge the strict 60-page minimum requirement. Let's begin Meeting 1. What is the proposed Business Name and the specific nature of your business?"}
+            ]
 
 def main():
     st.title("AI Grant Architect")
@@ -144,9 +149,14 @@ def main():
         selected_model = st.selectbox("Select AI Model", available_models, index=default_index)
         st.session_state['selected_model'] = selected_model
         
-        # Debug Button
         if st.button("Check My Access"):
              st.write(available_models)
+
+        # Reset Conversation Button
+        st.markdown("---")
+        if st.button("Reset Conversation", type="primary"):
+            state_manager.clear_session()
+            st.rerun()
 
     # Sidebar: Navigation & Design Studio
     with st.sidebar:
@@ -205,6 +215,7 @@ def main():
         if prompt := st.chat_input("Describe your business idea..."):
             # Add user message to chat history
             st.session_state.messages.append({"role": "user", "content": prompt})
+            state_manager.save_session() # Auto-Save after user input
             # Display user message in chat message container
             with st.chat_message("user"):
                 st.markdown(prompt)
@@ -278,6 +289,7 @@ def main():
 
             # Add assistant response to chat history
             st.session_state.messages.append({"role": "assistant", "content": full_response})
+            state_manager.save_session() # Auto-Save after AI response
         
         # Temporary button to simulate plan generation for testing the UI
         if st.button("Simulate Plan Generation (Dev Only)"):
@@ -298,6 +310,7 @@ Our financial projections are robust.
 # Operational Plan
 We plan to operate globally.
 """
+            state_manager.save_session()
             st.rerun()
 
     elif step == "Review Plan":
