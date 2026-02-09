@@ -1,0 +1,28 @@
+[Unit]
+Description=AI Grant Architect Streamlit App
+After=network.target
+
+[Service]
+# User and Group the service runs as.
+# CHANGE THESE if you are not running as root (recommended: create a dedicated user)
+User=root
+Group=root
+
+# The working directory of your application
+WorkingDirectory=/var/www/grant_architect
+
+# Environment variables
+# Ensure you set your API key here or in an EnvironmentFile
+Environment="GOOGLE_API_KEY=your_actual_api_key_here"
+Environment="PATH=/var/www/grant_architect/venv/bin:/usr/local/bin:/usr/bin:/bin"
+
+# ExecStart: Command to start the application
+# We use the python executable from the virtual environment directly
+ExecStart=/var/www/grant_architect/venv/bin/streamlit run app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
+
+# Restart policy
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
