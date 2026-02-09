@@ -109,7 +109,7 @@ def analyze_and_generate_visuals(plan_text, visual_style, api_key, progress_call
     """
     
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash-latest') # Using flash-latest to avoid 404 errors
+        model = genai.GenerativeModel('gemini-2.0-flash') # Using 2.0-flash to avoid 404 errors
         response = model.generate_content(analysis_prompt)
         
         # Parse JSON from response

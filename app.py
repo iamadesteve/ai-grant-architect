@@ -168,9 +168,9 @@ def main():
                     try:
                         import google.generativeai as genai
                         genai.configure(api_key=api_key)
-                        # Use gemini-1.5-flash-latest or gemini-pro to avoid 404 errors
+                        # Use gemini-2.0-flash which is available
                         # Passing system_instruction here (supported in newer library versions)
-                        model = genai.GenerativeModel('gemini-1.5-flash-latest', system_instruction=SYSTEM_PROMPT)
+                        model = genai.GenerativeModel('gemini-2.0-flash', system_instruction=SYSTEM_PROMPT)
                         
                         # Prepare context for the model
                         # We limit history to avoid token limits in this simple implementation
