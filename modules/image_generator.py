@@ -66,7 +66,7 @@ def generate_business_image(prompt, style, api_key):
         print(f"Error generating image: {e}")
         return create_placeholder_image(f"[Image: Generation Error - {str(e)[:50]}...]")
 
-def analyze_and_generate_visuals(plan_text, visual_style, api_key, progress_callback=None):
+def analyze_and_generate_visuals(plan_text, visual_style, api_key, model_name="gemini-1.5-flash", progress_callback=None):
     """
     Analyzes the business plan text to identify key sections for visualization,
     generates prompts using Gemini, and then generates images for those prompts.
@@ -110,7 +110,7 @@ def analyze_and_generate_visuals(plan_text, visual_style, api_key, progress_call
     """
     
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash') # Using flash as requested
+        model = genai.GenerativeModel(model_name) # Use selected model
         
         # Retry logic for analysis
         max_retries = 3
@@ -124,7 +124,8 @@ def analyze_and_generate_visuals(plan_text, visual_style, api_key, progress_call
             except Exception as e:
                 if "429" in str(e) or "ResourceExhausted" in str(e):
                     if attempt < max_retries - 1:
-                        time.sleep(retry_delay)
+                        wait_time = 2 ** (attempt + 1)
+                        time.sleep(wait_time)
                         continue
                     else:
                         print("Error: Quota exceeded for visual analysis.")

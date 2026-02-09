@@ -100,31 +100,53 @@ def main():
                 st.info("Please enter your Google API Key to proceed.")
                 st.stop()
 
+                st.stop()
+
+    # --- Dynamic Model Loading ---
+    @st.cache_data(ttl=3600)
+    def get_available_models(api_key):
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            models = []
+            for m in genai.list_models():
+                if 'generateContent' in m.supported_generation_methods:
+                    models.append(m.name)
+            return models
+        except Exception as e:
+            return ["models/gemini-1.5-flash", "models/gemini-1.5-pro"] # Fallback
+
+    available_models = get_available_models(api_key) if api_key else ["models/gemini-1.5-flash"]
+    
     # --- Model Selection & Debugging ---
     with st.sidebar:
         st.markdown("---")
         st.subheader("🤖 AI Configuration")
         
+        # Display SDK Version
+        try:
+             import google.generativeai as genai
+             st.caption(f"Using SDK Version: {genai.__version__}")
+        except:
+             pass
+
         # Model Selector
-        model_options = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash", "gemini-1.0-pro"]
-        selected_model = st.selectbox("Select AI Model", model_options, index=0)
+        if not available_models:
+             available_models = ["models/gemini-1.5-flash"]
+             
+        # Try to find a good default index
+        default_index = 0
+        for i, m in enumerate(available_models):
+            if "gemini-1.5-flash" in m and "latest" not in m:
+                default_index = i
+                break
+
+        selected_model = st.selectbox("Select AI Model", available_models, index=default_index)
         st.session_state['selected_model'] = selected_model
         
         # Debug Button
         if st.button("Check My Access"):
-            st.write("Checking models...")
-            try:
-                import google.generativeai as genai
-                if api_key:
-                    genai.configure(api_key=api_key)
-                    available_models = []
-                    for m in genai.list_models():
-                        if 'generateContent' in m.supported_generation_methods:
-                            st.write(f"- {m.name}")
-                else:
-                    st.error("API Key needed to check models.")
-            except Exception as e:
-                st.error(f"Error: {e}")
+             st.write(available_models)
 
     # Sidebar: Navigation & Design Studio
     with st.sidebar:
@@ -228,7 +250,8 @@ def main():
                                 error_str = str(e)
                                 if "429" in error_str or "ResourceExhausted" in error_str:
                                     if attempt < max_retries - 1:
-                                        time.sleep(retry_delay)
+                                        wait_time = 2 ** (attempt + 1) # Exponential Backoff: 2, 4, 8...
+                                        time.sleep(wait_time)
                                         continue
                                     else:
                                         full_response = "⚠️ System is currently overloaded (429). Please try again in partial moment."
