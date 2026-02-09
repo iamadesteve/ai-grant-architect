@@ -4,6 +4,7 @@ import io
 import json
 import google.generativeai as genai
 from PIL import Image, ImageDraw, ImageFont
+import time
 
 def create_placeholder_image(text):
     """Creates a placeholder image with text when generation fails."""
@@ -109,9 +110,31 @@ def analyze_and_generate_visuals(plan_text, visual_style, api_key, progress_call
     """
     
     try:
-        model = genai.GenerativeModel('gemini-2.0-flash') # Using 2.0-flash to avoid 404 errors
-        response = model.generate_content(analysis_prompt)
+        model = genai.GenerativeModel('gemini-1.5-flash') # Using flash as requested
         
+        # Retry logic for analysis
+        max_retries = 3
+        retry_delay = 5
+        response = None
+        
+        for attempt in range(max_retries):
+            try:
+                response = model.generate_content(analysis_prompt)
+                break
+            except Exception as e:
+                if "429" in str(e) or "ResourceExhausted" in str(e):
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        continue
+                    else:
+                        print("Error: Quota exceeded for visual analysis.")
+                        return {}
+                else:
+                    raise e
+        
+        if not response:
+             return {}
+
         # Parse JSON from response
         text_response = response.text
         # Clean up code blocks if present

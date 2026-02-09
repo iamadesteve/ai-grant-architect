@@ -1,5 +1,7 @@
 import streamlit as st
 from modules import image_generator, document_generator
+import time
+from google.api_core import exceptions
 
 # Page Configuration
 st.set_page_config(
@@ -168,25 +170,46 @@ def main():
                     try:
                         import google.generativeai as genai
                         genai.configure(api_key=api_key)
-                        # Use gemini-2.0-flash which is available
-                        # Passing system_instruction here (supported in newer library versions)
-                        model = genai.GenerativeModel('gemini-2.0-flash', system_instruction=SYSTEM_PROMPT)
+                        
+                        # Use gemini-1.5-flash as requested by user
+                        # We will include system_instruction
+                        model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=SYSTEM_PROMPT)
                         
                         # Prepare context for the model
-                        # We limit history to avoid token limits in this simple implementation
                         chat_history = []
                         for msg in st.session_state.messages[-10:]: # Last 10 messages
                             role = "user" if msg["role"] == "user" else "model"
                             chat_history.append({"role": role, "parts": [msg["content"]]})
                         
-                        # Generate response
-                        response = model.generate_content(chat_history, stream=True)
+                        # Generate response with Retry Logic
+                        max_retries = 3
+                        retry_delay = 5 # seconds
                         
-                        for chunk in response:
-                            if chunk.text:
-                                full_response += chunk.text
-                                message_placeholder.markdown(full_response + "▌")
-                        
+                        for attempt in range(max_retries):
+                            try:
+                                response = model.generate_content(chat_history, stream=True)
+                                
+                                for chunk in response:
+                                    if chunk.text:
+                                        full_response += chunk.text
+                                        message_placeholder.markdown(full_response + "▌")
+                                # If successful, break the retry loop
+                                break
+                            except Exception as e:
+                                # Check for 429 or ResourceExhausted
+                                error_str = str(e)
+                                if "429" in error_str or "ResourceExhausted" in error_str:
+                                    if attempt < max_retries - 1:
+                                        time.sleep(retry_delay)
+                                        continue
+                                    else:
+                                        full_response = "⚠️ System is currently overloaded (429). Please try again in partial moment."
+                                        message_placeholder.error(full_response)
+                                        break
+                                else:
+                                    # Other errors (like 404 if model is invalid)
+                                    raise e
+
                         message_placeholder.markdown(full_response)
                         
                         # Check if the plan is ready (heuristic)
