@@ -16,6 +16,10 @@ if 'generated_plan_text' not in st.session_state:
     st.session_state['generated_plan_text'] = ""
 if 'generated_images' not in st.session_state:
     st.session_state['generated_images'] = {}
+if 'messages' not in st.session_state:
+    st.session_state['messages'] = [
+        {"role": "assistant", "content": "Hello! I am your AI Grant Architect. I can help you draft a business plan or grant proposal. What is your business idea?"}
+    ]
 
 def main():
     st.title("AI Grant Architect")
@@ -81,6 +85,63 @@ def main():
     if step == "Consultation":
         st.write("## 1. Consultation Phase")
         st.write("Chat with the AI to build your plan.")
+
+        # Display chat messages from history
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+
+        # Accept user input
+        if prompt := st.chat_input("Describe your business idea..."):
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            # Display user message in chat message container
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            # Display assistant response in chat message container
+            with st.chat_message("assistant"):
+                message_placeholder = st.empty()
+                full_response = ""
+                
+                if api_key:
+                    try:
+                        import google.generativeai as genai
+                        genai.configure(api_key=api_key)
+                        model = genai.GenerativeModel('gemini-1.5-flash')
+                        
+                        # Prepare context for the model
+                        # We limit history to avoid token limits in this simple implementation
+                        chat_history = []
+                        for msg in st.session_state.messages[-10:]: # Last 10 messages
+                            role = "user" if msg["role"] == "user" else "model"
+                            chat_history.append({"role": role, "parts": [msg["content"]]})
+                        
+                        # Generate response
+                        response = model.generate_content(chat_history, stream=True)
+                        
+                        for chunk in response:
+                            if chunk.text:
+                                full_response += chunk.text
+                                message_placeholder.markdown(full_response + "▌")
+                        
+                        message_placeholder.markdown(full_response)
+                        
+                        # Check if the plan is ready (heuristic)
+                        if "BUSINESS PLAN GENERATED" in full_response:
+                             st.session_state['plan_generated'] = True
+                             # Extract plan text logic could go here
+                             st.session_state['generated_plan_text'] = full_response # Simplified for now
+
+                    except Exception as e:
+                        full_response = f"I encountered an error: {str(e)}"
+                        message_placeholder.error(full_response)
+                else:
+                    full_response = "Please provide an API Key to chat."
+                    message_placeholder.warning(full_response)
+
+            # Add assistant response to chat history
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
         
         # Temporary button to simulate plan generation for testing the UI
         if st.button("Simulate Plan Generation (Dev Only)"):
