@@ -100,6 +100,32 @@ def main():
                 st.info("Please enter your Google API Key to proceed.")
                 st.stop()
 
+    # --- Model Selection & Debugging ---
+    with st.sidebar:
+        st.markdown("---")
+        st.subheader("🤖 AI Configuration")
+        
+        # Model Selector
+        model_options = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash", "gemini-1.0-pro"]
+        selected_model = st.selectbox("Select AI Model", model_options, index=0)
+        st.session_state['selected_model'] = selected_model
+        
+        # Debug Button
+        if st.button("Check My Access"):
+            st.write("Checking models...")
+            try:
+                import google.generativeai as genai
+                if api_key:
+                    genai.configure(api_key=api_key)
+                    available_models = []
+                    for m in genai.list_models():
+                        if 'generateContent' in m.supported_generation_methods:
+                            st.write(f"- {m.name}")
+                else:
+                    st.error("API Key needed to check models.")
+            except Exception as e:
+                st.error(f"Error: {e}")
+
     # Sidebar: Navigation & Design Studio
     with st.sidebar:
         st.header("Navigation")
@@ -171,9 +197,11 @@ def main():
                         import google.generativeai as genai
                         genai.configure(api_key=api_key)
                         
-                        # Use gemini-1.5-flash as requested by user
-                        # We will include system_instruction
-                        model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=SYSTEM_PROMPT)
+                        # Use selected model from session state
+                        current_model_name = st.session_state.get('selected_model', 'gemini-1.5-flash')
+                        
+                        # Initialize Model
+                        model = genai.GenerativeModel(current_model_name, system_instruction=SYSTEM_PROMPT)
                         
                         # Prepare context for the model
                         chat_history = []
@@ -274,6 +302,7 @@ We plan to operate globally.
                         st.session_state['generated_plan_text'],
                         current_style,
                         api_key=api_key,
+                        model_name=st.session_state.get('selected_model', 'gemini-1.5-flash'),
                         progress_callback=update_progress
                     )
                 
