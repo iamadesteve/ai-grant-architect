@@ -2,7 +2,6 @@ import streamlit as st
 from modules import image_generator, document_generator, state_manager
 import time
 from google.api_core import exceptions
-
 # Page Configuration
 st.set_page_config(
     page_title="AI Grant Architect",
@@ -10,26 +9,19 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
 # --- MASTER AI PERSONA SYSTEM PROMPT ---
 SYSTEM_PROMPT = """
 # 🧠 MASTER AI PERSONA: The High-Stakes Business Plan & Grant Architect
-
 **Role:** You are a world-class Professional Business Proposal & Grant Plan Consultant. You have previously served as the Chairman of a grant-giving organization, giving you "insider" knowledge of what funders require. You have helped clients secure over $750M in funding.
-
 **The Objective:**
 Your goal is to guide the user through a consultation to produce a **comprehensive, award-winning Business Plan** that strictly follows the provided "Business Plan Template" structure.
-
 **CRITICAL CONSTRAINTS:**
 1.  **Volume:** The final Business Plan must be a **MINIMUM of 60 pages**. There is no upper limit. If the user provides extensive details, the plan should expand accordingly to 80, 100, or more pages. You must elaborate, expound, and provide deep market analysis to ensure this volume is met.
 2.  **Format:** The final output MUST be provided as a **downloadable .docx file**. You will use your Code Interpreter / Data Analysis tool to write the content into a Word document.
 3.  **Sequencing:** You must complete the Business Plan **first**. Only after the user has downloaded, reviewed, and approved the .docx file will you proceed to the Pitch Deck phase.
-
 ---
-
 ### 📚 THE MANDATED BUSINESS PLAN STRUCTURE
 You must ensure the final output covers every single section below. To meet the 60+ page requirement, you must generate extensive content for each:
-
 1.  **Cover Page:** Business Name, Contact Info, Logo placeholder, Brand Slogan.
 2.  **Executive Summary:** A snapshot of the core essence, business goals, investment proposition (Funding Amount), and impact/returns.
 3.  **Introduction:** Overview, Stage of Business (Idea/Market Entry/Growth), and Progress to date.
@@ -43,26 +35,20 @@ You must ensure the final output covers every single section below. To meet the 
 11. **Financial Projections:** 3-5 Year Revenue Forecast, Expense Forecast, P&L Statement, Cash Flow, Balance Sheet, Break-even Analysis.
 12. **Implementation Plan:** Key Actions (3/6/12 months), Execution Monitoring, KPIs/Milestones.
 13. **Appendix:** Resumes, Permits/Licenses, Legal Docs, Product Photos, References.
-
 ---
-
 ### ⚙️ OPERATIONAL PROTOCOL (The Consultation Process)
-
 You will conduct this consultation in **Phases**.
 * **Interaction Rule:** Ask **ONE** question at a time. Wait for the user's answer. Do not overwhelm the user.
 * **Tone:** Professional, empathetic, visionary, and thorough.
-
 #### 🗓️ PHASE 1: The Deep-Dive Discovery (Meetings 1-3)
 * **Meeting 1 (Foundation):** Establish the Business Name, Legal Structure, Vision, Mission, and **Specific Grant/Funding Details** (Amount, Organization, Purpose).
 * **Meeting 2 (Strategy & Operations):** Deep dive into the "Market Research," "Operational Plan," and "Marketing Strategy." *Ask probing questions to gather enough detail to write 10-15 pages for this section alone.*
 * **Meeting 3 (Financials & Logic):** Solidify the Budget (based on the Funding Amount), Revenue Projections, and Implementation Timeline.
-
 #### 🗓️ PHASE 2: The Business Plan Generation (Min 60 Pages)
 * Once the meetings are done, you will compile the content.
 * You will use **Python/Code Interpreter** to generate a **.docx file** containing the full plan.
 * **Formatting:** Use professional headers, clear tables for financials, and standard business formatting.
 * **Check:** Ask the user to download and review. If they need changes, revise the .docx file.
-
 #### 🗓️ PHASE 3: The Pitch Deck (Post-Approval)
 * **Start Condition:** ONLY begin this phase after the user says the Business Plan .docx is approved.
 * **Process:** Initiate a new mini-discovery for the deck. Ask about:
@@ -70,7 +56,6 @@ You will conduct this consultation in **Phases**.
     2.  Key focus areas for the presentation (Team vs. Product vs. Financials).
 * **Generation:** Generate the Pitch Deck content (Slide by Slide) and offer it as a **downloadable .pptx file** (using Python) or a PDF.
 """
-
 # Session State Initialization
 if 'plan_generated' not in st.session_state:
     st.session_state['plan_generated'] = False
@@ -87,7 +72,6 @@ if 'generated_images' not in st.session_state:
             st.session_state['messages'] = [
                 {"role": "assistant", "content": "Hello. I am your Professional Consultant. I acknowledge the strict 60-page minimum requirement. Let's begin Meeting 1. What is the proposed Business Name and the specific nature of your business?"}
             ]
-
 def main():
     st.title("AI Grant Architect")
     st.subheader("Your AI-Powered Business Plan & Grant Consultant")
@@ -104,9 +88,7 @@ def main():
             if not api_key:
                 st.info("Please enter your Google API Key to proceed.")
                 st.stop()
-
                 st.stop()
-
     # --- Dynamic Model Loading ---
     @st.cache_data(ttl=3600)
     def get_available_models(api_key):
@@ -120,7 +102,6 @@ def main():
             return models
         except Exception as e:
             return ["models/gemini-1.5-flash", "models/gemini-1.5-pro"] # Fallback
-
     available_models = get_available_models(api_key) if api_key else ["models/gemini-1.5-flash"]
     
     # --- Model Selection & Debugging ---
@@ -134,7 +115,6 @@ def main():
              st.caption(f"Using SDK Version: {genai.__version__}")
         except:
              pass
-
         # Model Selector
         if not available_models:
              available_models = ["models/gemini-1.5-flash"]
@@ -145,53 +125,45 @@ def main():
             if "gemini-1.5-flash" in m and "latest" not in m:
                 default_index = i
                 break
-
         selected_model = st.selectbox("Select AI Model", available_models, index=default_index)
         st.session_state['selected_model'] = selected_model
         
         if st.button("Check My Access"):
              st.write(available_models)
-
         # Reset Conversation Button
         st.markdown("---")
         if st.button("Reset Conversation", type="primary"):
             state_manager.clear_session()
             st.rerun()
-
     # Sidebar: Navigation & Design Studio
     with st.sidebar:
         st.header("Navigation")
         # Placeholder for future navigation (Discovery, Strategy, Financials)
         step = st.radio("Go to:", ["Consultation", "Review Plan", "Export"], index=0)
-
         # Design Studio - Only appears if plan is generated (or for testing purposes, we can toggle it)
         # Check requirement: "This should only appear after the Business Plan text is fully generated."
         if st.session_state['plan_generated']:
             st.markdown("---")
             st.header("🎨 Design Studio")
             st.markdown("Customize your document aesthetics.")
-
             # Color Theme Selector
             theme_color = st.selectbox(
                 "Color Theme",
                 ["Corporate Blue", "Eco Green", "Modern Minimalist (Black/White)", "Vibrant Startup"],
                 key="theme_color"
             )
-
             # Font Style Selector
             font_style = st.selectbox(
                 "Font Style",
                 ["Serif (Classic)", "Sans-Serif (Modern)", "Slab (Bold)"],
                 key="font_style"
             )
-
             # Visual Style Selector (AI Image Style)
             visual_style = st.selectbox(
                 "Visual Style",
                 ["Photorealistic", "3D Rendered Isometric", "Abstract Line Art"],
                 key="visual_style"
             )
-
             # 3D Asset Toggle
             use_3d_assets = st.checkbox(
                 "Generate 3D-style charts and icons",
@@ -200,17 +172,14 @@ def main():
             )
         else:
             st.info("Complete the consultation phase to unlock the Design Studio.")
-
     # Main Content Area
     if step == "Consultation":
         st.write("## 1. Consultation Phase")
         st.write("Chat with the AI to build your plan.")
-
         # Display chat messages from history
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
-
         # Accept user input
         if prompt := st.chat_input("Describe your business idea..."):
             # Add user message to chat history
@@ -219,7 +188,6 @@ def main():
             # Display user message in chat message container
             with st.chat_message("user"):
                 st.markdown(prompt)
-
             # Display assistant response in chat message container
             with st.chat_message("assistant"):
                 message_placeholder = st.empty()
@@ -271,7 +239,6 @@ def main():
                                 else:
                                     # Other errors (like 404 if model is invalid)
                                     raise e
-
                         message_placeholder.markdown(full_response)
                         
                         # Check if the plan is ready (heuristic)
@@ -279,14 +246,12 @@ def main():
                              st.session_state['plan_generated'] = True
                              # Extract plan text logic could go here
                              st.session_state['generated_plan_text'] = full_response # Simplified for now
-
                     except Exception as e:
                         full_response = f"I encountered an error: {str(e)}"
                         message_placeholder.error(full_response)
                 else:
                     full_response = "Please provide an API Key to chat."
                     message_placeholder.warning(full_response)
-
             # Add assistant response to chat history
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             state_manager.save_session() # Auto-Save after AI response
@@ -297,22 +262,17 @@ def main():
             st.session_state['generated_plan_text'] = """
 # Execution Summary
 This is the executive summary of the business plan.
-
 ## Mission Statement
 To revolutionize the grant writing process.
-
 # The Cover Page
 (This section implies a cover page image)
-
 # Financial Highlights
 Our financial projections are robust.
-
 # Operational Plan
 We plan to operate globally.
 """
             state_manager.save_session()
             st.rerun()
-
     elif step == "Review Plan":
         st.write("## 2. Review Your Plan")
         if st.session_state['plan_generated']:
@@ -362,10 +322,8 @@ We plan to operate globally.
                             section_name, img_obj = images_list[i+j]
                             with cols[j]:
                                 st.image(img_obj, caption=section_name, use_container_width=True)
-
         else:
             st.warning("No plan generated yet. Go to Consultation.")
-
     elif step == "Export":
         st.write("## 3. Export Documents")
         if st.session_state['plan_generated']:
@@ -396,13 +354,10 @@ We plan to operate globally.
                         file_name="Business_Plan.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
-
             with col2:
                 st.subheader("Pitch Deck (.pptx)")
                 st.button("Download .pptx", disabled=True, help="Coming in Phase 5")
-
         else:
             st.warning("Generate a plan first.")
-
 if __name__ == "__main__":
     main()
